@@ -1,0 +1,4 @@
+name: hrt
+channel: conda-forge
+dependencies: 
+    - statsmodels
