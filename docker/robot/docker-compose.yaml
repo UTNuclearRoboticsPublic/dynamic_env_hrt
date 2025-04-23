@@ -1,0 +1,72 @@
+
+services:
+
+  # Bridge ROS1->ROS2 messages
+  panther_bridge_srv:
+
+    image: panther_bridge_img
+    container_name: panther_bridge_cont
+    
+    build:
+      # set the build context to the directory containing build files
+      context: .
+      dockerfile: panther_bridge.Dockerfile
+
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_MASTER_URI=http://panther_bridge_srv:11311
+      - ROS_HOSTNAME=panther_bridge_srv
+
+    ports:
+      - "11311:11311" 
+
+    networks:
+      - ros_net
+
+    entrypoint: /panther_bridge_entrypoint.sh
+
+  # Launch ar_track_alvar in ros1 environment
+  ros1_srv:
+
+    image: panther_ros1_img
+    container_name: panther_ros1_cont
+    
+    build:
+      # set the build context to the directory containing build files
+      context: .
+      dockerfile: panther_ros1.Dockerfile
+
+    environment:
+      - MARKER_SIZE=15.2
+      - AR_CAM_TOPIC=/oak/rgb/image_raw
+      - AR_INFO_TOPIC=/oak/rgb/camera_info
+      - OUTPUT_FRAME=oak_rgb_camera_optical_frame
+      - ROS_MASTER_URI=http://panther_bridge_srv:11311
+      - ROS_HOSTNAME=ros1_srv
+
+    entrypoint: /panther_ros1_entrypoint.sh
+
+  rear_ros1_srv:
+
+    image: panther_ros1_rear_img
+    container_name: panther_ros1_rear_cont
+    
+    build:
+      # set the build context to the directory containing build files
+      context: .
+      dockerfile: panther_ros1.Dockerfile
+
+    environment:
+      - MARKER_SIZE=15.2
+      - AR_CAM_TOPIC=/rear_oak/rear_oak/rgb/image_raw
+      - AR_INFO_TOPIC=/rear_oak/rear_oak/rgb/camera_info
+      - OUTPUT_FRAME=rear_oak_rgb_camera_optical_frame
+      - ROS_NAMESPACE=rear_oak
+      - ROS_MASTER_URI=http://panther_bridge_srv:11311
+      - ROS_HOSTNAME=rear_ros1_srv
+
+    entrypoint: /panther_ros1_entrypoint.sh
+
+networks:
+  ros_net:
+    driver: bridge
