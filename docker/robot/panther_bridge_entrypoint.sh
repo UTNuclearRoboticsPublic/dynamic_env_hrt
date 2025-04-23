@@ -2,6 +2,9 @@
 set -e 
 echo "ROS bridge entrypoint" 
 
+source "/opt/ros/$ROS1_DISTRO/setup.bash" 
+roscore &
+
 # Source ROS2 and bridge environments 
 source "/opt/ros/$ROS2_DISTRO/setup.bash" 
 cd /bridge_ws 

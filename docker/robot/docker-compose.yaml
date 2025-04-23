@@ -5,15 +5,19 @@ services:
   panther_bridge_srv:
 
     image: panther_bridge_img
-    container_name: panther_bridge_cont
     
     build:
       # set the build context to the directory containing build files
       context: .
       dockerfile: panther_bridge.Dockerfile
 
+    volumes:
+      - ./cyclonedds_config.xml:/config/cyclonedds_config.xml:ro
+
     environment:
+      - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds_config.xml
       - ROS_MASTER_URI=http://panther_bridge_srv:11311
       - ROS_HOSTNAME=panther_bridge_srv
 
@@ -29,7 +33,6 @@ services:
   ros1_srv:
 
     image: panther_ros1_img
-    container_name: panther_ros1_cont
     
     build:
       # set the build context to the directory containing build files
@@ -49,7 +52,6 @@ services:
   rear_ros1_srv:
 
     image: panther_ros1_rear_img
-    container_name: panther_ros1_rear_cont
     
     build:
       # set the build context to the directory containing build files
