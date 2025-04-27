@@ -1,0 +1,134 @@
+### CONTROL
+/joy_node_teammate:
+  ros__parameters:
+    dev: /dev/input/js0
+    deadzone: 0.1
+    autorepeat_rate: 20.
+
+/teammate_joy_button_mapper_node:
+  ros__parameters:
+    input_topic: '/joy_teammate'
+    button_indices: [0,1,2,3]
+    output_topics: ['/teammate_estop','/teammate_estop','/teammate_estop','/teammate_estop']
+
+/joy_node_supervisor:
+  ros__parameters:
+    dev: /dev/input/js1
+    deadzone: 0.1
+    autorepeat_rate: 20.
+
+
+# /joy_node_woz:
+#   ros__parameters:
+#     dev: /dev/input/js0
+#     deadzone: 0.1
+#     autorepeat_rate: 20.
+
+# /joy_node_teleop:
+#   ros__parameters:
+#     dev: /dev/input/js1
+#     deadzone: 0.1
+#     autorepeat_rate: 20.
+
+/teleop_twist_joy_woz:
+  ros__parameters:
+    axis_linear:
+      x: 5
+    axis_angular:
+      yaw: 4
+    scale_linear: 
+      x: 0.5
+    scale_linear_turbo: 
+      x: .75
+    scale_angular: 
+      yaw: 0.5
+    scale_angular_turbo: 
+      yaw: 0.5
+    enable_button: 4
+    enable_turbo_button: 6
+
+/teleop_twist_joy:
+  ros__parameters:
+    axis_linear:
+      x: 1
+    axis_angular:
+      yaw: 0
+    scale_linear: 
+      x: 0.5
+    scale_linear_turbo: 
+      x: 1.0
+    scale_angular: 
+      yaw: 1.0
+    scale_angular_turbo: 
+      yaw: 2.0
+    enable_button: 4
+    enable_turbo_button: 5
+
+twist_mux:
+  ros__parameters:
+    topics:
+      cmd_vel_teleop:
+        topic   : cmd_vel_teleop
+        timeout : 0.5
+        priority: 10
+      cmd_vel_woz:
+        topic   : cmd_vel_woz
+        timeout : 0.5
+        priority: 8
+
+    locks:
+      hrt_exp_e_stop:
+        topic   : hrt_exp_e_stop
+        timeout : 0.0
+        priority: 12
+      disable_nav:
+        topic   : disable_nav
+        timeout : 0.0
+        priority: 9
+
+### UNIMODAL PROCESSING - LIDAR
+/urg_node:
+  ros__parameters:
+    angle_max: 1.57
+    angle_min: -1.57
+    ip_port: 10940
+    serial_port: "/dev/ttyACM0"
+    serial_baud: 115200
+    laser_frame_id: "panther/front_laser"
+    calibrate_time: false
+    default_user_latency: 0.0
+    diagnostics_tolerance: 0.05
+    diagnostics_window_time: 5.0
+    error_limit: 4
+    get_detailed_status: false
+    publish_intensity: false
+    publish_multiecho: false
+    cluster: 1
+    skip: 0
+
+/dr_spaam_ros:
+  ros__parameters:
+  
+    # weight_file: "ckpts/ckpt_jrdb_ann_drow3_e40.pth"
+    # detector_model: "DROW3"  # DROW3 or DR-SPAAM
+    weight_file: "ckpts/ckpt_jrdb_ann_dr_spaam_e20.pth"
+    detector_model: "DR-SPAAM"  # DROW3 or DR-SPAAM
+    conf_thresh: 0.8
+    stride: 1  # use this to skip laser points
+    panoramic_scan: False  # Set to true if the scan covers 360 degree
+
+    publisher:
+        detections:
+            topic: panther/dr_spaam_detections
+            queue_size: 1
+            latch: false
+
+        rviz:
+            topic: /dr_spaam_rviz
+            queue_size: 1
+            latch: false
+
+    subscriber:
+        scan:
+            topic: /scan
+            queue_size: 1

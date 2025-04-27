@@ -1,4 +1,5 @@
 name: hrt
 channel: conda-forge
 dependencies: 
-    - statsmodels
+  - python == 3.10
+  - statsmodels
