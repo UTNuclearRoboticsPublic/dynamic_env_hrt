@@ -8,7 +8,7 @@
 /teammate_joy_button_mapper_node:
   ros__parameters:
     input_topic: '/joy_teammate'
-    button_indices: [0,1,2,3]
+    button_indices: [0,1,3,4]
     output_topics: ['/teammate_estop','/teammate_estop','/teammate_estop','/teammate_estop']
 
 /joy_node_supervisor:
@@ -17,37 +17,25 @@
     deadzone: 0.1
     autorepeat_rate: 20.
 
-
-# /joy_node_woz:
-#   ros__parameters:
-#     dev: /dev/input/js0
-#     deadzone: 0.1
-#     autorepeat_rate: 20.
-
-# /joy_node_teleop:
-#   ros__parameters:
-#     dev: /dev/input/js1
-#     deadzone: 0.1
-#     autorepeat_rate: 20.
-
-/teleop_twist_joy_woz:
+/supervisor_joy_button_mapper_node:
   ros__parameters:
-    axis_linear:
-      x: 5
-    axis_angular:
-      yaw: 4
-    scale_linear: 
-      x: 0.5
-    scale_linear_turbo: 
-      x: .75
-    scale_angular: 
-      yaw: 0.5
-    scale_angular_turbo: 
-      yaw: 0.5
-    enable_button: 4
-    enable_turbo_button: 6
+    input_topic: '/joy_supervisor'
+    button_indices: [0,1,3,4]
+    output_topics: ['/supervisor_estop', '/supervisor_estop', '/supervisor_manual','/supervisor_auto']
 
-/teleop_twist_joy:
+/joy_node_operator:
+  ros__parameters:
+    dev: /dev/input/js2
+    deadzone: 0.1
+    autorepeat_rate: 20.
+
+/operator_joy_button_mapper_node:
+  ros__parameters:
+    input_topic: '/joy_operator'
+    button_indices: [0, 1, 3]
+    output_topics: ['/operator_estop', '/operator_estop', '/operator_manual']
+
+/operator_twist_joy:
   ros__parameters:
     axis_linear:
       x: 1
@@ -64,27 +52,76 @@
     enable_button: 4
     enable_turbo_button: 5
 
+
+/joy_node_researcher:
+  ros__parameters:
+    dev: /dev/input/js3
+    deadzone: 0.1
+    autorepeat_rate: 20.
+
+/researcher_joy_button_mapper_node:
+  ros__parameters:
+    input_topic: '/joy_researcher'
+    button_indices: [1,0,2,5,7]
+    output_topics: ['/researcher_estop', '/researcher_manual', '/researcher_auto', /trial_start, /trial_end]
+
+/researcher_twist_joy:
+  ros__parameters:
+    axis_linear:
+      x: 5
+    axis_angular:
+      yaw: 4
+    scale_linear: 
+      x: 0.5
+    scale_linear_turbo: 
+      x: .75
+    scale_angular: 
+      yaw: 0.5
+    scale_angular_turbo: 
+      yaw: 0.5
+    enable_button: 4
+    enable_turbo_button: 6
+
+
+
 twist_mux:
   ros__parameters:
     topics:
-      cmd_vel_teleop:
-        topic   : cmd_vel_teleop
+      cmd_vel_operator:
+        topic   : cmd_vel_operator
         timeout : 0.5
         priority: 10
       cmd_vel_woz:
-        topic   : cmd_vel_woz
+        topic   : cmd_vel_researcher
         timeout : 0.5
         priority: 8
 
     locks:
-      hrt_exp_e_stop:
-        topic   : hrt_exp_e_stop
+      teammate_estop:
+        topic   : teammate_estop
         timeout : 0.0
         priority: 12
-      disable_nav:
-        topic   : disable_nav
+
+      supervisor_estop:
+        topic   : supervisor_estop
+        timeout : 0.0
+        priority: 12
+
+      operator_estop:
+        topic   : supervisor_estop
+        timeout : 0.0
+        priority: 12
+
+      supervisor_manual:
+        topic   : supervisor_manual
         timeout : 0.0
         priority: 9
+
+      operator_manual:
+        topic   : operator_manual
+        timeout : 0.0
+        priority: 9
+
 
 ### UNIMODAL PROCESSING - LIDAR
 /urg_node:

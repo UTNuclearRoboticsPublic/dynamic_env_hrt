@@ -1,5 +1,11 @@
 name: hrt
-channel: conda-forge
+channels: 
+  - conda-forge
 dependencies: 
   - python == 3.10
   - statsmodels
+  - lark
+  - pip
+  - pip:
+    - catkin_pkg
+    - empy==3.3.4

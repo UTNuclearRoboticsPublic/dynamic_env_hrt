@@ -41,6 +41,7 @@ def generate_launch_description():
     )
     ld.add_action(teammate_button_mapper)
 
+
     supervisor_joy_node = Node(
         package='joy_linux',
         executable='joy_linux_node',
@@ -51,47 +52,77 @@ def generate_launch_description():
     )
     ld.add_action(supervisor_joy_node)
 
-    # woz_joy_node = Node(
-    #     package='joy_linux',
-    #     executable='joy_linux_node',
-    #     name='joy_node_woz',
-    #     output='screen',
-    #     parameters=[config],
-    #     remappings=[('/joy','/joy_woz')],
-    # )
-    # ld.add_action(woz_joy_node)
+    supervisor_button_mapper = Node(
+        package='dynamic_env_hrt',
+        executable='joy_button_mapper.py',
+        name='supervisor_joy_button_mapper_node',
+        output='screen',
+        parameters=[config]
+    )
+    ld.add_action(supervisor_button_mapper)
 
-    # teleop_joy_node = Node(
-    #     package='joy_linux',
-    #     executable='joy_linux_node',
-    #     name='joy_node_teleop',
-    #     output='screen',
-    #     parameters=[config],
-    #     remappings=[('/joy','/joy_teleop')],
-    # )
-    # ld.add_action(teleop_joy_node)
 
-    # woz_teleop_node = Node(
-    #     package='teleop_twist_joy',
-    #     executable='teleop_node',
-    #     name='teleop_twist_joy_woz',
-    #     output='screen',
-    #     parameters=[config],
-    #     remappings=[('/joy','/joy_woz'),
-    #                 ('/cmd_vel','/cmd_vel_woz')],
-    # )
-    # ld.add_action(woz_teleop_node)
+    teleop_joy_node = Node(
+        package='joy_linux',
+        executable='joy_linux_node',
+        name='joy_node_operator',
+        output='screen',
+        parameters=[config],
+        remappings=[('/joy','/joy_operator')],
+    )
+    ld.add_action(teleop_joy_node)
 
-    # teleop_node = Node(
-    #     package='teleop_twist_joy',
-    #     executable='teleop_node',
-    #     name='teleop_twist_joy',
-    #     output='screen',
-    #     parameters=[config],
-    #     remappings=[('/joy','/joy_teleop'),
-    #                 ('/cmd_vel','/cmd_vel_teleop')],
-    # )
-    # ld.add_action(teleop_node)
+    teleop_node = Node(
+        package='teleop_twist_joy',
+        executable='teleop_node',
+        name='operator_twist_joy',
+        output='screen',
+        parameters=[config],
+        remappings=[('/joy','/joy_operator'),
+                    ('/cmd_vel','/cmd_vel_operator')],
+    )
+    ld.add_action(teleop_node)
+
+    operator_button_mapper = Node(
+        package='dynamic_env_hrt',
+        executable='joy_button_mapper.py',
+        name='operator_joy_button_mapper_node',
+        output='screen',
+        parameters=[config]
+    )
+    ld.add_action(operator_button_mapper)
+
+
+    researcher_joy_node = Node(
+        package='joy_linux',
+        executable='joy_linux_node',
+        name='joy_node_researcher',
+        output='screen',
+        parameters=[config],
+        remappings=[('/joy','/joy_researcher')],
+    )
+    ld.add_action(researcher_joy_node)
+
+    researcher_teleop_node = Node(
+        package='teleop_twist_joy',
+        executable='teleop_node',
+        name='researcher_twist_joy',
+        output='screen',
+        parameters=[config],
+        remappings=[('/joy','/joy_researcher'),
+                    ('/cmd_vel','/cmd_vel_researcher')],
+    )
+    ld.add_action(researcher_teleop_node)
+
+    researcher_button_mapper = Node(
+        package='dynamic_env_hrt',
+        executable='joy_button_mapper.py',
+        name='researcher_joy_button_mapper_node',
+        output='screen',
+        parameters=[config]
+    )
+    ld.add_action(researcher_button_mapper)
+
 
     twist_mux_node = Node(
         package='twist_mux',
@@ -102,17 +133,17 @@ def generate_launch_description():
     )
     ld.add_action(twist_mux_node)
 
-    # ### SENSORS
+    ### SENSORS
 
-    # # 2D LiDAR node
-    # lidar_2d_node = Node(
-    #     package='urg_node',
-    #     executable='urg_node_driver',
-    #     name='urg_node',
-    #     output='screen',
-    #     parameters=[config]
-    # )
-    # ld.add_action(lidar_2d_node)
+    # 2D LiDAR node
+    lidar_2d_node = Node(
+        package='urg_node',
+        executable='urg_node_driver',
+        name='urg_node',
+        output='screen',
+        parameters=[config]
+    )
+    ld.add_action(lidar_2d_node)
 
     # # Vision
     # cam_node = IncludeLaunchDescription(
@@ -145,17 +176,17 @@ def generate_launch_description():
     # ld.add_action(rear_cam_node)
 
 
-    # ### PERCEPTION NODES
+    ### PERCEPTION NODES
 
-    # # LiDAR leg detection
-    # leg_det_node = Node(
-    #     package='dr_spaam_ros',
-    #     executable='node.py',
-    #     name='dr_spaam_ros',
-    #     output='screen',
-    #     parameters=[config]
-    # )
-    # ld.add_action(leg_det_node)
+    # LiDAR leg detection
+    leg_det_node = Node(
+        package='dr_spaam_ros',
+        executable='node.py',
+        name='dr_spaam_ros',
+        output='screen',
+        parameters=[config]
+    )
+    ld.add_action(leg_det_node)
 
     ### TEAMING NODE
 

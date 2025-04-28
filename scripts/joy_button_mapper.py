@@ -34,21 +34,21 @@ class JoyButtonMapperNode(Node):
             type=ParameterType.PARAMETER_STRING,
             description='Input topic for sensor_msgs/msg/Joy messages.'
         )
-        self.declare_parameter('input_topic', '', input_topic_descriptor) # Default empty, requires user input
+        self.declare_parameter('input_topic', descriptor=input_topic_descriptor) # Default empty, requires user input
 
         # Button Indices Parameter
         button_indices_descriptor = ParameterDescriptor(
             type=ParameterType.PARAMETER_INTEGER_ARRAY,
             description='List of button indices to monitor from the Joy message.'
         )
-        self.declare_parameter('button_indices', [], button_indices_descriptor) # Default empty
+        self.declare_parameter('button_indices', descriptor=button_indices_descriptor) # Default empty
 
         # Output Topics Parameter
         output_topics_descriptor = ParameterDescriptor(
             type=ParameterType.PARAMETER_STRING_ARRAY,
             description='List of output topics for std_msgs/msg/Bool messages. Must match length of button_indices.'
         )
-        self.declare_parameter('output_topics', [], output_topics_descriptor) # Default empty
+        self.declare_parameter('output_topics', descriptor=output_topics_descriptor) # Default empty
 
         # --- Get Parameters ---
         self.input_topic_ = self.get_parameter('input_topic').get_parameter_value().string_value
@@ -127,7 +127,8 @@ class JoyButtonMapperNode(Node):
             # Create and publish the Bool message
             bool_msg = Bool()
             bool_msg.data = button_state
-            publisher.publish(bool_msg)
+            if button_state:
+                publisher.publish(bool_msg)  # Only publish if true
             # self.get_logger().debug(f"Published {bool_msg.data} to {output_topic} for button index {button_index}") # Optional debug logging
 
 
