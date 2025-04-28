@@ -7,150 +7,210 @@ from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Bool
-from typing import List, Dict
+from typing import List, Dict, Set, Tuple, Any
 
 class JoyButtonMapperNode(Node):
     """
     A ROS 2 node that subscribes to a Joy topic and publishes Boolean messages
-    based on the state of specified buttons.
+    to multiple topics based on the state of specified buttons.
+
+    For each monitored button:
+    - When PRESSED (Joy value 1): Publishes True to its 'true_topics' and
+                                 False to its 'false_topics'.
+    - When RELEASED (Joy value 0): Publishes False to its 'true_topics' and
+                                  True to its 'false_topics'.
 
     Parameters:
-        input_topic (str): The topic name for the incoming sensor_msgs/msg/Joy messages.
-        button_indices (List[int]): A list of non-negative integers representing the
-                                     indices of the buttons to monitor in the Joy message's
-                                     'buttons' array.
-        output_topics (List[str]): A list of topic names corresponding to each button
-                                   index. A std_msgs/msg/Bool message will be published
-                                   on the i-th topic based on the state of the button
-                                   at the i-th index in 'button_indices'.
-                                   Must be the same length as 'button_indices'.
+        input_topic (str): Topic for incoming sensor_msgs/msg/Joy.
+        button_indices (List[int]): Indices of buttons to monitor.
+        true_topics_str_list (List[str]): List parallel to button_indices.
+            Each element is a comma-separated string of topic names to publish
+            True on when the corresponding button is pressed (and False when released).
+            Example: ["/topic_a,/topic_b", "/topic_c"]
+        false_topics_str_list (List[str]): List parallel to button_indices.
+            Each element is a comma-separated string of topic names to publish
+            False on when the corresponding button is pressed (and True when released).
+            Example: ["/topic_d", "/topic_e,/topic_f"]
     """
     def __init__(self):
         super().__init__('joy_button_mapper_node')
 
         # --- Declare Parameters ---
-        # Input Topic Parameter
         input_topic_descriptor = ParameterDescriptor(
             type=ParameterType.PARAMETER_STRING,
             description='Input topic for sensor_msgs/msg/Joy messages.'
         )
-        self.declare_parameter('input_topic', descriptor=input_topic_descriptor) # Default empty, requires user input
-
-        # Button Indices Parameter
         button_indices_descriptor = ParameterDescriptor(
             type=ParameterType.PARAMETER_INTEGER_ARRAY,
             description='List of button indices to monitor from the Joy message.'
         )
-        self.declare_parameter('button_indices', descriptor=button_indices_descriptor) # Default empty
-
-        # Output Topics Parameter
-        output_topics_descriptor = ParameterDescriptor(
+        true_topics_descriptor = ParameterDescriptor(
             type=ParameterType.PARAMETER_STRING_ARRAY,
-            description='List of output topics for std_msgs/msg/Bool messages. Must match length of button_indices.'
+            description='List of comma-separated topics to publish True on when button pressed.'
         )
-        self.declare_parameter('output_topics', descriptor=output_topics_descriptor) # Default empty
+        false_topics_descriptor = ParameterDescriptor(
+            type=ParameterType.PARAMETER_STRING_ARRAY,
+            description='List of comma-separated topics to publish False on when button pressed.'
+        )
+
+        self.declare_parameter('input_topic', descriptor=input_topic_descriptor)
+        self.declare_parameter('button_indices', descriptor=button_indices_descriptor)
+        self.declare_parameter('true_topics_str_list', descriptor=true_topics_descriptor)
+        self.declare_parameter('false_topics_str_list', descriptor=false_topics_descriptor)
 
         # --- Get Parameters ---
-        self.input_topic_ = self.get_parameter('input_topic').get_parameter_value().string_value
-        self.button_indices_ = self.get_parameter('button_indices').get_parameter_value().integer_array_value
-        self.output_topics_ = self.get_parameter('output_topics').get_parameter_value().string_array_value
+        self.input_topic_ = self.get_parameter('input_topic').value
+        self.button_indices_ = self.get_parameter('button_indices').value
+        self.true_topics_str_list_ = self.get_parameter('true_topics_str_list').value
+        self.false_topics_str_list_ = self.get_parameter('false_topics_str_list').value
 
         # --- Validate Parameters ---
         if not self.input_topic_:
-            self.get_logger().fatal("Parameter 'input_topic' is required and cannot be empty.")
+            self.get_logger().fatal("Parameter 'input_topic' is required.")
             raise ValueError("Parameter 'input_topic' not set.")
 
-        if not self.button_indices_:
-            self.get_logger().warn("Parameter 'button_indices' is empty. No buttons will be mapped.")
-            # Allow running, but it won't do anything useful
+        len_indices = len(self.button_indices_)
+        len_true = len(self.true_topics_str_list_)
+        len_false = len(self.false_topics_str_list_)
 
-        if len(self.button_indices_) != len(self.output_topics_):
+        if not (len_indices == len_true == len_false):
             self.get_logger().fatal(
-                f"Parameter 'button_indices' (length {len(self.button_indices_)}) "
-                f"and 'output_topics' (length {len(self.output_topics_)}) "
-                f"must have the same length."
+                f"Parameters 'button_indices' (len {len_indices}), "
+                f"'true_topics_str_list' (len {len_true}), and "
+                f"'false_topics_str_list' (len {len_false}) must have the same length."
             )
-            raise ValueError("Mismatch between button_indices and output_topics length.")
+            raise ValueError("Parameter list length mismatch.")
 
         if any(idx < 0 for idx in self.button_indices_):
-             self.get_logger().fatal("Parameter 'button_indices' contains negative values. Indices must be non-negative.")
+             self.get_logger().fatal("Negative values found in 'button_indices'.")
              raise ValueError("Invalid negative button index.")
 
-        # --- Initialize Publishers ---
+        if len_indices == 0:
+             self.get_logger().warn("'button_indices' is empty. No mapping configured.")
+
+        # --- Parse Topics and Prepare Mapping ---
         self.publishers_: Dict[str, rclpy.publisher.Publisher] = {}
-        for topic_name in self.output_topics_:
-            if not topic_name:
-                 self.get_logger().fatal("Empty string found in 'output_topics'. All output topics must be valid names.")
-                 raise ValueError("Invalid empty output topic name.")
-            self.publishers_[topic_name] = self.create_publisher(Bool, topic_name, 10)
-            self.get_logger().info(f"Created publisher for topic: {topic_name}")
+        self.mapping_: List[Dict[str, Any]] = [] # Stores parsed mapping
+        all_unique_topics: Set[str] = set()
+
+        for i, button_index in enumerate(self.button_indices_):
+            true_topics_raw = self.true_topics_str_list_[i]
+            false_topics_raw = self.false_topics_str_list_[i]
+
+            # Parse comma-separated strings into lists, removing empty strings
+            true_topics = [t.strip() for t in true_topics_raw.split(',') if t.strip()]
+            false_topics = [t.strip() for t in false_topics_raw.split(',') if t.strip()]
+
+            # Add topics to the set for publisher creation
+            all_unique_topics.update(true_topics)
+            all_unique_topics.update(false_topics)
+
+            # Store the parsed mapping for this button index
+            self.mapping_.append({
+                'index': button_index,
+                'true_topics': true_topics,
+                'false_topics': false_topics
+            })
+            self.get_logger().info(
+                f"Mapping button {button_index}: "
+                f"Pressed -> True on {true_topics}, False on {false_topics}"
+            )
+
+        # --- Create Publishers ---
+        for topic_name in all_unique_topics:
+             # Basic validation for topic name
+             if not topic_name or not topic_name.startswith('/'):
+                 self.get_logger().warn(f"Skipping potentially invalid topic name: '{topic_name}'")
+                 continue
+             self.publishers_[topic_name] = self.create_publisher(Bool, topic_name, 10)
+             self.get_logger().info(f"Created publisher for topic: {topic_name}")
 
         # --- Initialize Subscription ---
         self.subscription = self.create_subscription(
             Joy,
             self.input_topic_,
             self.joy_callback,
-            10  # QoS profile depth
+            10
         )
         self.get_logger().info(f"Subscribed to Joy topic: {self.input_topic_}")
-        self.get_logger().info(f"Mapping button indices {self.button_indices_} to topics {self.output_topics_}")
 
 
     def joy_callback(self, msg: Joy):
         """
-        Callback function executed when a Joy message is received.
+        Callback executed on receiving a Joy message.
 
-        Iterates through the specified button indices and publishes the
-        corresponding boolean state to the associated output topics.
+        Iterates through the button mappings. For each button:
+        - Determines if it's pressed (1) or released (0).
+        - Publishes True/False to the configured 'true_topics'.
+        - Publishes False/True to the configured 'false_topics'.
         """
         num_buttons_in_msg = len(msg.buttons)
 
-        for i, button_index in enumerate(self.button_indices_):
-            output_topic = self.output_topics_[i]
-            publisher = self.publishers_[output_topic]
+        # Prepare messages once per callback
+        msg_true = Bool(data=True)
+        msg_false = Bool(data=False)
 
-            # Check if the requested button index is valid for this message
+        for mapping_entry in self.mapping_:
+            button_index = mapping_entry['index']
+            true_topics = mapping_entry['true_topics']
+            false_topics = mapping_entry['false_topics']
+
+            # Check if the button index is valid for this specific message
             if button_index >= num_buttons_in_msg:
                 self.get_logger().warn(
                     f"Button index {button_index} is out of bounds for received Joy message "
-                    f"(size {num_buttons_in_msg}) on topic {self.input_topic_}. Skipping."
+                    f"(size {num_buttons_in_msg}). Skipping this button's mapping."
                 )
-                continue # Skip this button for this message
+                continue
 
-            # Determine the boolean state (Joy buttons are typically 0 or 1)
-            # The prompt asks "If the i^th integer in the input integer array is true..."
-            # This interpretation assumes the *value* at that index in the Joy message determines the output.
-            # A Joy button message `buttons` field usually contains 0 (released) or 1 (pressed).
-            # So, we check if the value at `msg.buttons[button_index]` is non-zero (effectively True).
-            button_state = bool(msg.buttons[button_index])
+            is_pressed = bool(msg.buttons[button_index])
 
-            # Create and publish the Bool message
-            bool_msg = Bool()
-            bool_msg.data = button_state
-            if button_state:
-                publisher.publish(bool_msg)  # Only publish if true
-            # self.get_logger().debug(f"Published {bool_msg.data} to {output_topic} for button index {button_index}") # Optional debug logging
+            # Determine which message to send to which topic list
+            msg_for_true_list = msg_true # if is_pressed else msg_false
+            msg_for_false_list = msg_false # if is_pressed else msg_true
+
+            if is_pressed:
+                # Publish to 'true' topics
+                for topic_name in true_topics:
+                    if topic_name in self.publishers_:
+                        self.publishers_[topic_name].publish(msg_for_true_list)
+                    else:
+                        self.get_logger().warn(f"Publisher for topic '{topic_name}' not found (should not happen).")
+
+
+                # Publish to 'false' topics
+                for topic_name in false_topics:
+                    if topic_name in self.publishers_:
+                        self.publishers_[topic_name].publish(msg_for_false_list)
+                    else:
+                        self.get_logger().warn(f"Publisher for topic '{topic_name}' not found (should not happen).")
 
 
 def main(args=None):
     rclpy.init(args=args)
+    node = None # Define node initially as None
     try:
-        joy_button_mapper = JoyButtonMapperNode()
-        rclpy.spin(joy_button_mapper)
-    except (ValueError, rclpy.exceptions.ParameterNotDeclaredException, rclpy.exceptions.InvalidParameterValueException) as e:
-         # Log fatal during init already covers this, but catch just in case
-         print(f"Node initialization failed: {e}")
+        node = JoyButtonMapperNode()
+        rclpy.spin(node)
+    except (ValueError, rclpy.exceptions.ParameterException, TypeError) as e:
+         # Catch potential errors during init or parameter handling
+         print(f"Node initialization or parameter error: {e}")
+         if node: # Log using node logger if available
+             node.get_logger().fatal(f"Node initialization or parameter error: {e}")
     except KeyboardInterrupt:
-        pass # Expected on Ctrl+C
+        print("Node interrupted by user (Ctrl+C).")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}") # Log any other exceptions
+        print(f"An unexpected error occurred during node execution: {e}")
+        if node:
+            node.get_logger().error(f"An unexpected error occurred: {e}")
     finally:
-        # Ensure cleanup happens even if errors occur during spin
-        if 'joy_button_mapper' in locals() and rclpy.ok():
-             joy_button_mapper.destroy_node()
+        if node and rclpy.ok() and node.context.ok():
+             print("Destroying node...")
+             node.destroy_node()
         if rclpy.ok():
+             print("Shutting down rclpy...")
              rclpy.shutdown()
-        print("Joy Button Mapper node shut down cleanly.")
+        print("Joy Button Mapper node finished.")
 
 
 if __name__ == '__main__':
