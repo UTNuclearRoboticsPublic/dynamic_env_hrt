@@ -1,0 +1,35 @@
+### ANALYSIS
+
+users:
+  - name: "teammate"
+    topic: "/joy_teammate" # The topic this user's Joy messages are on
+    button_events:        # Mapping from button index to event name
+      0: "teammate-stop"
+      1: "teammate-stop"
+      3: "teammate-stop"
+      4: "teammate-stop"
+
+  - name: "operator"
+    topic: "/joy_operator"
+    button_events:
+      0: "operator-stop"
+      1: "operator-stop"
+      3: "operator-enable-operator"
+
+  - name: "supervisor"
+    topic: "/joy_supervisor"
+    button_events:
+      0: "supervisor-stop"
+      1: "supervisor-stop"
+      3: "supervisor-enable-operator"
+      4: "supervisor-enable-autonomy"
+
+  - name: "researcher"
+    topic: "/joy_researcher"
+    button_events:
+      0: "researcher-stop"
+      1: "researcher-stop"
+      3: "researcher-enable-operator"
+      4: "researcher-enable-autonomy"
+      5: "researcher-trial-start"
+      7: "researcher-trial-end"

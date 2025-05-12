@@ -2,10 +2,13 @@ name: hrt
 channels: 
   - conda-forge
 dependencies: 
-  - python == 3.10
+  - python == 3.12
   - statsmodels
   - lark
+  - empy
+  - catkin_pkg
   - pip
   - pip:
-    - catkin_pkg
-    - empy==3.3.4
+    - pyyaml 
+    - pandas 
+    
