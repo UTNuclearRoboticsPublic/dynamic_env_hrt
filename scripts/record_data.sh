@@ -7,4 +7,4 @@ if [ -z "$1" ]; then
 fi
 
 # Create the file using the touch command
-ros2 bag record -s mcap -o ../bags/"$1" /cmd_vel_operator /joy_supervisor /panther/odometry/filtered /panther/dr_spaam_detections /joy_teammate /trial_start /trial_end /joy_researcher /manual /dr_spaam_rviz /joy_operator /estop /cmd_vel_researcher
+ros2 bag record -s mcap -o ../bags/"$1" /cmd_vel_operator /joy_supervisor /panther/odometry/filtered /panther/dr_spaam_detections /joy_teammate /trial_start /mark_event /trial_end /joy_researcher /disable_auto /dr_spaam_rviz /joy_operator /estop /cmd_vel_researcher
