@@ -124,14 +124,25 @@ def generate_launch_description():
     ld.add_action(researcher_button_mapper)
 
 
-    twist_mux_node = Node(
+    twist_mux_op_node = Node(
         package='twist_mux',
         executable='twist_mux',
+        name='twist_mux_op',
         output='screen',
         remappings={('/cmd_vel_out', 'panther/cmd_vel')},
         parameters=[config]
     )
-    ld.add_action(twist_mux_node)
+    ld.add_action(twist_mux_op_node)
+
+    twist_mux_woz_node = Node(
+        package='twist_mux',
+        executable='twist_mux',
+        name='twist_mux_woz',
+        output='screen',
+        remappings={('/cmd_vel_out', 'panther/cmd_vel')},
+        parameters=[config]
+    )
+    ld.add_action(twist_mux_woz_node)
 
     ### SENSORS
 
