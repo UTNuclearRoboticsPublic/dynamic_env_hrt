@@ -1,5 +1,7 @@
 ### ANALYSIS
 
+detections_topic: "/panther/dr_spaam_detections"
+
 users:
   - name: "teammate"
     topic: "/joy_teammate" # The topic this user's Joy messages are on
