@@ -1,6 +1,7 @@
 ### ANALYSIS
 
 detections_topic: "/panther/dr_spaam_detections"
+odometry_topic: "/panther/odometry/filtered"
 
 users:
   - name: "teammate"
